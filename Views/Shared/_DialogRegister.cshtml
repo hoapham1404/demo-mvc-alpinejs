@@ -1,0 +1,64 @@
+<div x-data="registerForm()" class="modal fade" id="createUserDialog" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content" x-ref="modalContent">
+			<form asp-action="ExecCreateUser" method="post" x-ref="form">
+				<div class="modal-header">
+					<h5 class="modal-title" id="registerModalLabel" x-text="title">Register User</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label name="UserName" class="form-label"></label>
+						<input name="UserName" class="form-control" />
+						<!-- <span asp-validation-for="UserName" class="text-danger"></span> -->
+					</div>
+					<div class="mb-3">
+						<label name="Email" class="form-label"></label>
+						<input name="Email" class="form-control" />
+						<!-- <span asp-validation-for="Email" class="text-danger"></span> -->
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-primary" x-on:click="submitForm()">Register</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<script>
+	function registerForm() {
+		return {
+			title: 'Register Form',
+			async submitForm () {
+				let form = this.$refs.form;
+				let formData = new FormData(form);
+				console.log(form);
+				console.log(formData);
+
+				try {
+					let response = await fetch(form.action, {
+						method: 'POST',
+						body: formData,
+						headers: {
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
+
+					let data = await response.json();
+					if (data.success) {
+						console.log(this.$root);
+						location.reload();
+						console.log("Register succesful!")
+					} else {
+						Alpine.initTree(this.$refs.modalContent);
+					}
+				} catch (error){
+					console.error('Request failed:', error);
+				}
+			}
+		}
+
+	}
+</script>
