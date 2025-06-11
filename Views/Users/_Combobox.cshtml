@@ -7,7 +7,8 @@
         displayProperty: '@Model.DisplayProperty', 
         selectedValuePath: '@Model.SelectedValuePath',
         placeholder: '@Model.Placeholder',
-        onSelectCallback: '@Model.OnSelectCallback'
+        onSelectCallback: '@Model.OnSelectCallback',
+        isDisabled: '@Model.IsDisabled'
     })" 
      x-init="initialize()"
      class="dropdown position-relative">
@@ -15,16 +16,18 @@
     <input 
         type="text" 
         class="form-control" 
+        :class="{ 'bg-light': isDisabled }"
         :placeholder="config.placeholder || 'Select...'"
+        :disabled="isDisabled"
         x-model="searchTerm"
-        x-on:focus="isOpen = true"
+        x-on:focus="!isDisabled && (isOpen = true)"
         x-on:blur="setTimeout(() => isOpen = false, 200)"
         x-on:input="handleInput()"
         :value="displayValue"
         autocomplete="off" />
     
     <div class="dropdown-menu w-100" 
-         :class="{ 'show': isOpen && items.length > 0 }"
+         :class="{ 'show': isOpen && items.length > 0 && !isDisabled }"
          x-transition>
         <template x-for="(item, index) in filteredItems" :key="index">
             <button 
@@ -43,158 +46,169 @@
 </div>
 
 <script>
-document.addEventListener('alpine:init', () => {
-    // Reusable Combobox Component
-    Alpine.data('reusableCombobox', (config) => ({
-        config: config,
-        searchTerm: '',
-        isOpen: false,
-        selectedItem: null,
+	document.addEventListener('alpine:init', () => {
+		// Reusable Combobox Component
+		Alpine.data('reusableCombobox', (config) => ({
+			config: config,
+			searchTerm: '',
+			isOpen: false,
+			selectedItem: null,
 
-        // Get items from parent scope
-        get items() {
-            const parent = this.getParentData();
-            return this.getNestedProperty(parent, this.config.itemsSourcePath) || [];
-        },
+			// Get items from parent scope
+			get items() {
+				const parent = this.getParentData();
+				return this.getNestedProperty(parent, this.config.itemsSourcePath) || [];
+			},
 
-        // Filter items based on search
-        get filteredItems() {
-            if (!this.searchTerm) return this.items;
-            
-            const search = this.searchTerm.toLowerCase();
-            return this.items.filter(item => {
-                const displayValue = item[this.config.displayProperty]?.toString().toLowerCase() || '';
-                const valueValue = item[this.config.valueProperty]?.toString().toLowerCase() || '';
-                return displayValue.includes(search) || valueValue.includes(search);
-            });
-        },
+			// Check if combobox is disabled
+			get isDisabled() {
+				if (!this.config.isDisabled) return false;
+				const parent = this.getParentData();
+				return this.getNestedProperty(parent, this.config.isDisabled) || false;
+			},
 
-        // Get display value for input
-        get displayValue() {
-            if (this.selectedItem) {
-                return this.getItemDisplay(this.selectedItem);
-            }
-            return this.searchTerm;
-        },
+			// Filter items based on search
+			get filteredItems() {
+				if (!this.searchTerm) return this.items;
 
-        // Initialize component
-        initialize() {
-            // Watch for changes in parent's selected value
-            this.$watch(() => this.getSelectedValueFromParent(), (newValue) => {
-                this.syncWithParent(newValue);
-            });
+				const search = this.searchTerm.toLowerCase();
+				return this.items.filter(item => {
+					const displayValue = item[this.config.displayProperty]?.toString().toLowerCase() || '';
+					const valueValue = item[this.config.valueProperty]?.toString().toLowerCase() || '';
+					return displayValue.includes(search) || valueValue.includes(search);
+				});
+			},
 
-            // Initial sync
-            this.syncWithParent(this.getSelectedValueFromParent());
-        },
+			// Get display value for input
+			get displayValue() {
+				if (this.selectedItem) {
+					return this.getItemDisplay(this.selectedItem);
+				}
+				return this.searchTerm;
+			},
 
-        // Get parent Alpine data
-        getParentData() {
-            let el = this.$el.parentElement;
-            while (el) {
-                if (el._x_dataStack && el._x_dataStack.length > 0) {
-                    // Find the parent data that's not this combobox
-                    for (let i = el._x_dataStack.length - 1; i >= 0; i--) {
-                        const data = el._x_dataStack[i];
-                        if (data !== this && typeof data === 'object') {
-                            return data;
-                        }
-                    }
-                }
-                el = el.parentElement;
-            }
-            return {};
-        },
+			// Initialize component
+			initialize() {
+				// Watch for changes in parent's selected value
+				this.$watch(() => this.getSelectedValueFromParent(), (newValue) => {
+					this.syncWithParent(newValue);
+				});
 
-        // Get nested property from object using dot notation
-        getNestedProperty(obj, path) {
-            return path.split('.').reduce((o, p) => o && o[p], obj);
-        },
+				// Initial sync
+				this.syncWithParent(this.getSelectedValueFromParent());
+			},
 
-        // Set nested property in object using dot notation
-        setNestedProperty(obj, path, value) {
-            const keys = path.split('.');
-            const lastKey = keys.pop();
-            const target = keys.reduce((o, k) => o[k] = o[k] || {}, obj);
-            target[lastKey] = value;
-        },
+			// Get parent Alpine data
+			getParentData() {
+				let el = this.$el.parentElement;
+				while (el) {
+					if (el._x_dataStack && el._x_dataStack.length > 0) {
+						// Find the parent data that's not this combobox
+						for (let i = el._x_dataStack.length - 1; i >= 0; i--) {
+							const data = el._x_dataStack[i];
+							if (data !== this && typeof data === 'object') {
+								return data;
+							}
+						}
+					}
+					el = el.parentElement;
+				}
+				return {};
+			},
 
-        // Get selected value from parent scope
-        getSelectedValueFromParent() {
-            const parent = this.getParentData();
-            return this.getNestedProperty(parent, this.config.selectedValuePath);
-        },
+			// Get nested property from object using dot notation
+			getNestedProperty(obj, path) {
+				return path.split('.').reduce((o, p) => o && o[p], obj);
+			},
 
-        // Sync component with parent's selected value
-        syncWithParent(selectedValue) {
-            if (selectedValue) {
-                const item = this.items.find(item => 
-                    item[this.config.valueProperty] === selectedValue
-                );
-                if (item) {
-                    this.selectedItem = item;
-                    this.searchTerm = '';
-                } else {
-                    this.selectedItem = null;
-                }
-            } else {
-                this.selectedItem = null;
-                this.searchTerm = '';
-            }
-        },
+			// Set nested property in object using dot notation
+			setNestedProperty(obj, path, value) {
+				const keys = path.split('.');
+				const lastKey = keys.pop();
+				const target = keys.reduce((o, k) => o[k] = o[k] || {}, obj);
+				target[lastKey] = value;
+			},
 
-        // Handle input changes
-        handleInput() {
-            this.isOpen = true;
-            // Clear selection when typing
-            if (this.searchTerm && this.selectedItem) {
-                this.selectedItem = null;
-                this.updateParentValue('');
-            }
-        },
+			// Get selected value from parent scope
+			getSelectedValueFromParent() {
+				const parent = this.getParentData();
+				return this.getNestedProperty(parent, this.config.selectedValuePath);
+			},
 
-        // Select an item
-        selectItem(item) {
-            this.selectedItem = item;
-            this.searchTerm = '';
-            this.isOpen = false;
-            
-            const selectedValue = item[this.config.valueProperty];
-            this.updateParentValue(selectedValue);
-            
-            // Call parent callback if specified
-            if (this.config.onSelectCallback) {
-                const parent = this.getParentData();
-                if (typeof parent[this.config.onSelectCallback] === 'function') {
-                    parent[this.config.onSelectCallback](item);
-                }
-            }
-        },
+			// Sync component with parent's selected value
+			syncWithParent(selectedValue) {
+				if (selectedValue) {
+					const item = this.items.find(item => 
+						item[this.config.valueProperty] === selectedValue
+					);
+					if (item) {
+						this.selectedItem = item;
+						this.searchTerm = '';
+					} else {
+						this.selectedItem = null;
+					}
+				} else {
+					this.selectedItem = null;
+					this.searchTerm = '';
+				}
+			},
 
-        // Update parent's selected value
-        updateParentValue(value) {
-            const parent = this.getParentData();
-            this.setNestedProperty(parent, this.config.selectedValuePath, value);
-        },
+			// Handle input changes
+			handleInput() {
+				if (this.isDisabled) return;
 
-        // Check if item is selected
-        isItemSelected(item) {
-            return this.selectedItem && 
-                   this.selectedItem[this.config.valueProperty] === item[this.config.valueProperty];
-        },
+				this.isOpen = true;
+				// Clear selection when typing
+				if (this.searchTerm && this.selectedItem) {
+					this.selectedItem = null;
+					this.updateParentValue('');
+				}
+			},
 
-        // Get display text for item
-        getItemDisplay(item) {
-            return `${item[this.config.displayProperty]} - ${item[this.config.valueProperty]}`;
-        },
+			// Select an item
+			selectItem(item) {
+				if (this.isDisabled) return;
 
-        // Reset component
-        reset() {
-            this.selectedItem = null;
-            this.searchTerm = '';
-            this.isOpen = false;
-            this.updateParentValue('');
-        }
-    }));
-});
+				this.selectedItem = item;
+				this.searchTerm = '';
+				this.isOpen = false;
+
+				const selectedValue = item[this.config.valueProperty];
+				this.updateParentValue(selectedValue);
+
+				// Call parent callback if specified
+				if (this.config.onSelectCallback) {
+					const parent = this.getParentData();
+					if (typeof parent[this.config.onSelectCallback] === 'function') {
+						parent[this.config.onSelectCallback](item);
+					}
+				}
+			},
+
+			// Update parent's selected value
+			updateParentValue(value) {
+				const parent = this.getParentData();
+				this.setNestedProperty(parent, this.config.selectedValuePath, value);
+			},
+
+			// Check if item is selected
+			isItemSelected(item) {
+				return this.selectedItem && 
+					this.selectedItem[this.config.valueProperty] === item[this.config.valueProperty];
+			},
+
+			// Get display text for item
+			getItemDisplay(item) {
+				return `${item[this.config.displayProperty]} - ${item[this.config.valueProperty]}`;
+			},
+
+			// Reset component
+			reset() {
+				this.selectedItem = null;
+				this.searchTerm = '';
+				this.isOpen = false;
+				this.updateParentValue('');
+			}
+		}));
+	});
 </script>

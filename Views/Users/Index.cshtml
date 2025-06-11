@@ -3,38 +3,67 @@
     <script src="~/js/users.js" asp-append-version="true"></script>
 }
 
-<div class="d-flex flex-row gap-2" x-data="usersHandler">
-    <!-- Store Combobox -->
-    <div class="combobox-container">
-        <label class="form-label">Store</label>
-        @await Html.PartialAsync("_Combobox.cshtml", new ComboboxViewModel{
-            Id = "store-combo",
-            ItemsSourcePath = "allStores",
-            ValueProperty = "StoreCode",
-            DisplayProperty = "StoreName",
-            SelectedValuePath = "selectedStoreCode",
-            Placeholder = "Select Store...",
-            OnSelectCallback = "onStoreSelect"
-        })
+<div class="d-flex flex-column gap-3" x-data="usersHandler">
+    <!-- Permission Combobox - Controls visibility/behavior of others -->
+    <div class="row">
+        <div class="col-md-4">
+            <label class="form-label">Permission Level</label>
+            @await Html.PartialAsync("_Combobox.cshtml", new ComboboxViewModel{
+                Id = "permission-combo",
+                ItemsSourcePath = "allPermissions",
+                ValueProperty = "Value",
+                DisplayProperty = "Name",
+                SelectedValuePath = "selectedPermissionValue",
+                Placeholder = "Select Permission...",
+                OnSelectCallback = "onPermissionSelect"
+            })
+        </div>
     </div>
 
-    <!-- Tenant Combobox -->
-    <div class="combobox-container">
-        <label class="form-label">Tenant</label>
-        @await Html.PartialAsync("_Combobox.cshtml", new ComboboxViewModel{
-            Id = "tenant-combo", 
-            ItemsSourcePath = "filteredTenants",
-            ValueProperty = "TenantCode",
-            DisplayProperty = "TenantName",
-            SelectedValuePath = "selectedTenantCode",
-            Placeholder = "Select Tenant...",
-            OnSelectCallback = "onTenantSelect"
-        })
+    <!-- Store and Tenant Row -->    
+    <div class="row gap-2" x-show="shouldShowStoreAndTenant">
+        <!-- Store Combobox -->
+        <div class="col-md-4">
+            <label class="form-label">Store</label>
+            @await Html.PartialAsync("_Combobox.cshtml", new ComboboxViewModel{
+                Id = "store-combo",
+                ItemsSourcePath = "allStores",
+                ValueProperty = "StoreCode",
+                DisplayProperty = "StoreName",
+                SelectedValuePath = "selectedStoreCode",
+                Placeholder = "Select Store...",
+                OnSelectCallback = "onStoreSelect",
+                IsDisabled = "isStoreDisabled"
+            })
+        </div>
+
+        <!-- Tenant Combobox -->
+        <div class="col-md-4" x-show="shouldShowTenant">
+            <label class="form-label">Tenant</label>
+            @await Html.PartialAsync("_Combobox.cshtml", new ComboboxViewModel{
+                Id = "tenant-combo", 
+                ItemsSourcePath = "filteredTenants",
+                ValueProperty = "TenantCode",
+                DisplayProperty = "TenantName",
+                SelectedValuePath = "selectedTenantCode",
+                Placeholder = "Select Tenant...",
+                OnSelectCallback = "onTenantSelect",
+                IsDisabled = "isTenantDisabled"
+            })
+        </div>
     </div>
 
     <!-- Debug Display -->
-    <div class="mt-3">
-        <p><strong>Selected Store:</strong> <span x-text="selectedStoreCode || 'None'"></span></p>
-        <p><strong>Selected Tenant:</strong> <span x-text="selectedTenantCode || 'None'"></span></p>
+    <div class="mt-3 p-3 bg-light rounded">
+        <h6>Current Selection:</h6>
+        <p><strong>Permission:</strong> <span x-text="getPermissionDisplay() || 'None'"></span></p>
+        <p><strong>Store:</strong> <span x-text="selectedStoreCode || 'None'"></span></p>
+        <p><strong>Tenant:</strong> <span x-text="selectedTenantCode || 'None'"></span></p>
+        
+        <h6 class="mt-3">Visibility State:</h6>
+        <p><strong>Show Store/Tenant:</strong> <span x-text="shouldShowStoreAndTenant"></span></p>
+        <p><strong>Show Tenant:</strong> <span x-text="shouldShowTenant"></span></p>
+        <p><strong>Store Disabled:</strong> <span x-text="isStoreDisabled"></span></p>
+        <p><strong>Tenant Disabled:</strong> <span x-text="isTenantDisabled"></span></p>
     </div>
 </div>
